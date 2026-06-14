@@ -35,24 +35,28 @@ def validar_resultado(nombre, simulacion, resultado):
     assert resultado["estadisticas"], f"{nombre}: no genero estadisticas"
     assert resultado["rk"], f"{nombre}: no genero tabla Runge-Kutta"
 
-    assert len(filas) <= p.mostrar_cantidad, f"{nombre}: mostro mas filas que i"
+    assert filas, f"{nombre}: no genero la fila final obligatoria"
+    assert len(filas) <= p.mostrar_cantidad + 1, f"{nombre}: mostro mas filas que i mas final"
     assert simulacion.reloj == p.tiempo_simulacion or simulacion.iteracion >= p.max_iteraciones, f"{nombre}: no corto correctamente"
 
-    if filas:
-        primera = filas[0]["Iteracion"]
-        ultima_visible = filas[-1]["Iteracion"]
+    filas_rango = [fila for fila in filas if fila["Evento"] not in EVENTOS_FINALES]
+    fila_final = filas[-1]
+    assert fila_final["Evento"] in EVENTOS_FINALES, f"{nombre}: no mostro la fila final al final"
+
+    if filas_rango:
+        primera = filas_rango[0]["Iteracion"]
+        ultima_visible = filas_rango[-1]["Iteracion"]
         assert primera >= p.mostrar_desde, f"{nombre}: empezo antes de j"
         assert ultima_visible < p.mostrar_desde + p.mostrar_cantidad, f"{nombre}: mostro despues de j+i-1"
 
-        for anterior, actual in zip(filas, filas[1:]):
-            assert actual["Reloj (seg)"] >= anterior["Reloj (seg)"], f"{nombre}: el reloj retrocedio"
-            assert actual["Iteracion"] >= anterior["Iteracion"], f"{nombre}: la iteracion retrocedio"
+    for anterior, actual in zip(filas, filas[1:]):
+        assert actual["Reloj (seg)"] >= anterior["Reloj (seg)"], f"{nombre}: el reloj retrocedio"
+        assert actual["Iteracion"] >= anterior["Iteracion"], f"{nombre}: la iteracion retrocedio"
 
-        for fila in filas:
-            if fila["Evento"] == EVENTO_FIN_SIMULACION:
-                assert fila["Reloj (seg)"] == p.tiempo_simulacion, f"{nombre}: final visible no esta en X"
-            if fila["Evento"] == EVENTO_FIN_MAX_ITERACIONES:
-                assert simulacion.iteracion == p.max_iteraciones, f"{nombre}: max iter visible incorrecto"
+    if fila_final["Evento"] == EVENTO_FIN_SIMULACION:
+        assert fila_final["Reloj (seg)"] == p.tiempo_simulacion, f"{nombre}: final visible no esta en X"
+    if fila_final["Evento"] == EVENTO_FIN_MAX_ITERACIONES:
+        assert simulacion.iteracion == p.max_iteraciones, f"{nombre}: max iter visible incorrecto"
 
     assert 0 <= simulacion.dosis_gripe_abiertas <= p.dosis_caja_gripe, f"{nombre}: dosis gripe fuera de rango"
     assert simulacion.covid_vacunados <= simulacion.covid_llegados, f"{nombre}: vacuno mas COVID de los que llegaron"

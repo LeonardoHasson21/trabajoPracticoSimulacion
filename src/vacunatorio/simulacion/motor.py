@@ -337,7 +337,8 @@ class Simulacion:
             <= self.iteracion
             < self.p.mostrar_desde + self.p.mostrar_cantidad
         )
-        if not guardar:
+        es_fila_final = evento in {EVENTO_FIN_SIMULACION, EVENTO_FIN_MAX_ITERACIONES}
+        if not guardar and not es_fila_final:
             return
 
         fila = {

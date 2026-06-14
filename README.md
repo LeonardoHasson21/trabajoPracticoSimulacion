@@ -49,7 +49,7 @@ La opcion `-B` evita que Python cree carpetas `__pycache__`.
 - Frecuencia y duracion de la interrupcion.
 - Condiciones numericas de Runge-Kutta: R inicial, t inicial, t final y paso h.
 
-El vector muestra estrictamente desde la iteracion `j` hasta `j + i - 1`. La fila final de simulacion solo aparece si su numero de iteracion cae dentro de ese rango.
+El vector muestra las `i` iteraciones solicitadas desde `j` hasta `j + i - 1` y, ademas, agrega la ultima fila de cierre de la simulacion. Por eso, si la fila final esta fuera del rango pedido, se vera como una fila adicional.
 
 ## Decisiones de modelado
 

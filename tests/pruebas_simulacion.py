@@ -28,28 +28,27 @@ def probar_filtro_i_j_y_fila_final():
     p = Parametros(tiempo_simulacion=3600, mostrar_desde=5, mostrar_cantidad=7)
     resultado = Simulacion(p).simular()
     filas = resultado["filas"]
+    filas_rango = [fila for fila in filas if fila["Evento"] != EVENTO_FIN_SIMULACION]
 
-    assert len(filas) <= 7
-    assert filas[0]["Iteracion"] == 5
-    assert filas[-1]["Iteracion"] <= 11
-    assert all(fila["Evento"] != EVENTO_FIN_SIMULACION for fila in filas)
+    assert len(filas_rango) <= 7
+    assert filas_rango[0]["Iteracion"] == 5
+    assert filas_rango[-1]["Iteracion"] <= 11
+    assert filas[-1]["Evento"] == EVENTO_FIN_SIMULACION
+    assert filas[-1]["Reloj (seg)"] == 3600
 
 
-def probar_fila_final_solo_si_cae_en_rango():
-    p_base = Parametros(tiempo_simulacion=3600, mostrar_desde=0, mostrar_cantidad=100000)
-    resultado_base = Simulacion(p_base).simular()
-    iteracion_final = resultado_base["filas"][-1]["Iteracion"]
-
-    p_con_final = Parametros(
+def probar_fila_final_se_muestra_aunque_no_caiga_en_rango():
+    p = Parametros(
         tiempo_simulacion=3600,
-        mostrar_desde=iteracion_final,
-        mostrar_cantidad=1,
+        mostrar_desde=0,
+        mostrar_cantidad=3,
     )
-    filas_con_final = Simulacion(p_con_final).simular()["filas"]
+    filas = Simulacion(p).simular()["filas"]
 
-    assert len(filas_con_final) == 1
-    assert filas_con_final[0]["Evento"] == EVENTO_FIN_SIMULACION
-    assert filas_con_final[0]["Reloj (seg)"] == 3600
+    assert len(filas) == 4
+    assert [fila["Iteracion"] for fila in filas[:3]] == [0, 1, 2]
+    assert filas[-1]["Evento"] == EVENTO_FIN_SIMULACION
+    assert filas[-1]["Iteracion"] > 2
 
 
 def probar_interrupcion_exactamente_en_x_no_se_procesa():
@@ -121,7 +120,7 @@ def probar_interrupcion_parametrizable():
 
 if __name__ == "__main__":
     probar_filtro_i_j_y_fila_final()
-    probar_fila_final_solo_si_cae_en_rango()
+    probar_fila_final_se_muestra_aunque_no_caiga_en_rango()
     probar_interrupcion_exactamente_en_x_no_se_procesa()
     probar_corte_por_max_iteraciones()
     probar_parametros_de_caja_y_tiempo()
