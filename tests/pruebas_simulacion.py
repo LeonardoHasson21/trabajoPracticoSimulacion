@@ -94,14 +94,48 @@ def probar_parametros_de_caja_y_tiempo():
     assert simulacion.cajas_covid_abiertas == 1
 
 
-def probar_runge_kutta_configurable_y_coeficientes_fijos():
-    p = Parametros(rk_t_inicial=0, rk_t_final=0.04, rk_paso=0.02)
+def probar_runge_kutta_configurable():
+    p = Parametros(
+        rk_t_inicial=0,
+        rk_t_final=0.04,
+        rk_paso=0.02,
+        rk_coef_r=50,
+        rk_coef_t=-2,
+        rk_constante=-10,
+    )
     resultado = Simulacion(p).simular()
 
     assert len(resultado["rk"]) == 3
-    assert not hasattr(p, "rk_coef_izquierdo")
-    assert not hasattr(p, "rk_coef_derecho")
+    assert resultado["rk"][0]["t"] == 0
+    assert resultado["rk"][0]["E"] == 1
+    assert abs(resultado["rk"][0]["K1"] - 40) < 0.0001
+    assert abs(resultado["rk"][0]["E+H/2*K1"] - 1.4) < 0.0001
+    assert abs(resultado["rk"][0]["E(i+1)"] - 2.3661) < 0.0001
     assert buscar_estadistica(resultado, "Tiempo vencimiento gripe por RK (seg)") > 0
+
+
+def probar_vector_muestra_atributos_de_pacientes_presentes():
+    p = Parametros(
+        tiempo_simulacion=100,
+        media_llegada_covid=5,
+        media_llegada_gripe=10**9,
+        dosis_caja_covid=9999,
+        mostrar_desde=0,
+        mostrar_cantidad=20,
+    )
+    filas = Simulacion(p).simular()["filas"]
+    fila = next(fila for fila in filas if fila.get("_objetos"))
+    paciente = fila["_objetos"][0]
+
+    assert set(paciente) == {
+        "ID",
+        "Vacuna",
+        "Estado",
+        "Llegada (seg)",
+        "Grupo",
+        "Inicio vacunacion",
+    }
+    assert fila["Pacientes presentes"] == len(fila["_objetos"])
 
 
 def probar_interrupcion_parametrizable():
@@ -124,6 +158,7 @@ if __name__ == "__main__":
     probar_interrupcion_exactamente_en_x_no_se_procesa()
     probar_corte_por_max_iteraciones()
     probar_parametros_de_caja_y_tiempo()
-    probar_runge_kutta_configurable_y_coeficientes_fijos()
+    probar_runge_kutta_configurable()
+    probar_vector_muestra_atributos_de_pacientes_presentes()
     probar_interrupcion_parametrizable()
     print("Todas las pruebas pasaron correctamente.")

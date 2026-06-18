@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.vacunatorio.config.constantes import COEFICIENTE_RK_DERECHO, COEFICIENTE_RK_IZQUIERDO
+
 
 @dataclass
 class Parametros:
@@ -22,6 +24,9 @@ class Parametros:
     rk_t_inicial: float = 0.0
     rk_t_final: float = 0.2
     rk_paso: float = 0.01
+    rk_coef_r: float = COEFICIENTE_RK_IZQUIERDO - COEFICIENTE_RK_DERECHO
+    rk_coef_t: float = 0.0
+    rk_constante: float = 0.0
 
 
 def validar_parametros(p):

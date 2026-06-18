@@ -5,7 +5,7 @@ from src.vacunatorio.config.constantes import INFINITO
 
 def formatear_numero(valor, decimales=4):
     if valor is None or valor == "":
-        return ""
+        return "-"
     if valor == INFINITO:
         return "-"
     if isinstance(valor, int):

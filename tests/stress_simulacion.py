@@ -135,6 +135,9 @@ def escenarios_aleatorios(cantidad=150):
                 rk_t_inicial=0,
                 rk_t_final=rng.uniform(0.01, 0.4),
                 rk_paso=rng.uniform(0.001, 0.05),
+                rk_coef_r=rng.uniform(-60, 60),
+                rk_coef_t=rng.uniform(-30, 30),
+                rk_constante=rng.uniform(-30, 30),
             ),
         )
 

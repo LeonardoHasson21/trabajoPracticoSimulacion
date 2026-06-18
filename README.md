@@ -47,7 +47,7 @@ La opcion `-B` evita que Python cree carpetas `__pycache__`.
 - Dosis por caja de cada vacuna.
 - Tiempo de aplicacion por paciente.
 - Frecuencia y duracion de la interrupcion.
-- Condiciones numericas de Runge-Kutta: R inicial, t inicial, t final y paso h.
+- Condiciones numericas de Runge-Kutta: R inicial, t inicial, t final, paso h, coeficiente de R, coeficiente de t y constante c.
 
 El vector muestra las `i` iteraciones solicitadas desde `j` hasta `j + i - 1` y, ademas, agrega la ultima fila de cierre de la simulacion. Por eso, si la fila final esta fuera del rango pedido, se vera como una fila adicional.
 
@@ -75,9 +75,15 @@ En el programa se despeja:
 dR/dt = (41,4 - 0,0575) * R
 ```
 
+La pantalla lo plantea como:
+
+```text
+dR/dt = 41,3425 * R + 0 * t + c, con c = 0
+```
+
 Como esa ecuacion no tiene maximo natural cuando `R` inicial es positivo, el programa toma como tiempo de vencimiento el maximo valor de `R` dentro del intervalo de integracion configurado en la pantalla.
 
-Los coeficientes `41,4` y `0,0575` no se pueden modificar desde la interfaz porque son datos fijos del enunciado.
+Los valores `41,3425`, `0` y `c = 0` arrancan con la equivalencia del enunciado, pero se pueden modificar desde la interfaz para probar otros escenarios, incluso con valores negativos.
 
 ## Estadisticas calculadas
 
