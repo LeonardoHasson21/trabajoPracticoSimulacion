@@ -257,7 +257,7 @@ class Aplicacion(tk.Tk):
                 ("tiempo_por_paciente", "Segundos por paciente", 22),
             ]),
             ("Interrupcion", [
-                ("intervalo_interrupcion", "Cada cuantos seg ocurre", 3600),
+                ("media_interrupcion", "Media llegada interrupcion (seg)", 3600),
                 ("duracion_interrupcion", "Duracion interrupcion (seg)", 300),
             ]),
             ("Runge-Kutta", [
@@ -395,6 +395,7 @@ class Aplicacion(tk.Tk):
         return columnas
 
     def construir_encabezado_vector(self, filas):
+        self.indexar_objetos_por_vacuna(filas)
         pacientes_gripe = max(1, self.max_pacientes_en_filas(filas, GRIPE))
         pacientes_covid = max(1, self.max_pacientes_en_filas(filas, COVID))
 
@@ -483,10 +484,19 @@ class Aplicacion(tk.Tk):
             )
         return grupo(titulo, AZUL_OSCURO, hijos, BLANCO)
 
+    def indexar_objetos_por_vacuna(self, filas):
+        for fila in filas:
+            if "_objetos_por_vacuna" in fila:
+                continue
+            grupos = {GRIPE: [], COVID: []}
+            for paciente in fila.get("_objetos", []):
+                grupos[paciente.get("Vacuna")].append(paciente)
+            fila["_objetos_por_vacuna"] = grupos
+
     def max_pacientes_en_filas(self, filas, vacuna):
         maximo = 0
         for fila in filas:
-            cantidad = sum(1 for paciente in fila.get("_objetos", []) if paciente.get("Vacuna") == vacuna)
+            cantidad = len(fila.get("_objetos_por_vacuna", {}).get(vacuna, []))
             maximo = max(maximo, cantidad)
         return maximo
 
@@ -501,11 +511,11 @@ class Aplicacion(tk.Tk):
         indice = int(partes[4])
         atributo = partes[5]
 
-        pacientes = [
-            paciente
-            for paciente in fila.get("_objetos", [])
-            if paciente.get("Vacuna") == vacuna
-        ]
+        grupos = fila.get("_objetos_por_vacuna")
+        if grupos is None:
+            self.indexar_objetos_por_vacuna([fila])
+            grupos = fila["_objetos_por_vacuna"]
+        pacientes = grupos.get(vacuna, [])
         if indice >= len(pacientes):
             return ""
 
@@ -517,7 +527,15 @@ class Aplicacion(tk.Tk):
         return ""
 
     def limpiar_detalle_pacientes(self):
-        columnas = ["ID", "Vacuna", "Estado", "Llegada (seg)", "Grupo", "Inicio vacunacion"]
+        columnas = [
+            "ID",
+            "Vacuna",
+            "Estado",
+            "Llegada (seg)",
+            "Grupo",
+            "Grupo llegada",
+            "Inicio vacunacion",
+        ]
         self.configurar_columnas(self.tabla_detalle_pacientes, columnas)
         self.texto_detalle.set("Seleccione una fila para ver los pacientes presentes.")
 

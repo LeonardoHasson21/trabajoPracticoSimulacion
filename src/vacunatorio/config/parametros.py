@@ -17,7 +17,7 @@ class Parametros:
     dosis_caja_gripe: int = 10
     tiempo_por_paciente: float = 22.0
 
-    intervalo_interrupcion: float = 3600.0
+    media_interrupcion: float = 3600.0
     duracion_interrupcion: float = 300.0
 
     rk_r_inicial: float = 1.0
@@ -38,12 +38,14 @@ def validar_parametros(p):
         raise ValueError("Los parametros i y j no pueden ser negativos.")
     if p.media_llegada_covid <= 0 or p.media_llegada_gripe <= 0:
         raise ValueError("Las medias de llegada deben ser mayores a cero.")
-    if p.dosis_caja_covid <= 0 or p.dosis_caja_gripe <= 0:
-        raise ValueError("Las dosis por caja deben ser mayores a cero.")
+    if p.dosis_caja_covid <= 0:
+        raise ValueError("Las dosis por caja de COVID deben ser mayores a cero.")
+    if p.dosis_caja_gripe <= 0:
+        raise ValueError("Las dosis por caja de gripe deben ser mayores a cero.")
     if p.tiempo_por_paciente <= 0:
         raise ValueError("El tiempo por paciente debe ser mayor a cero.")
-    if p.intervalo_interrupcion <= 0:
-        raise ValueError("El intervalo de interrupcion debe ser mayor a cero.")
+    if p.media_interrupcion <= 0:
+        raise ValueError("La media de llegada de interrupciones debe ser mayor a cero.")
     if p.duracion_interrupcion < 0:
         raise ValueError("La duracion de la interrupcion no puede ser negativa.")
     if p.rk_paso <= 0:

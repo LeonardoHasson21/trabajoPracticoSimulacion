@@ -46,7 +46,7 @@ La opcion `-B` evita que Python cree carpetas `__pycache__`.
 - Medias de llegada de COVID y gripe.
 - Dosis por caja de cada vacuna.
 - Tiempo de aplicacion por paciente.
-- Frecuencia y duracion de la interrupcion.
+- Media exponencial de llegada y duracion de la interrupcion.
 - Condiciones numericas de Runge-Kutta: R inicial, t inicial, t final, paso h, coeficiente de R, coeficiente de t y constante c.
 
 El vector muestra las `i` iteraciones solicitadas desde `j` hasta `j + i - 1` y, ademas, agrega la ultima fila de cierre de la simulacion. Por eso, si la fila final esta fuera del rango pedido, se vera como una fila adicional.
@@ -56,10 +56,10 @@ El vector muestra las `i` iteraciones solicitadas desde `j` hasta `j + i - 1` y,
 - Las llegadas de COVID y gripe son independientes.
 - En cada llegada arriba un grupo de 1 a 4 personas con probabilidad uniforme.
 - COVID se vacuna solo cuando hay al menos 5 pacientes. Si hay mas, se vacuna la mayor cantidad posible en multiplos de 5, porque las cajas tienen 5 dosis.
-- Gripe usa una caja abierta de 10 dosis. Si no hay caja abierta y llega gente para gripe, se abre una nueva.
+- Gripe usa cajas de 10 dosis. Cuando le corresponde atender al primer grupo, se abren las cajas adicionales necesarias para vacunarlo completo.
 - Las dosis sobrantes de gripe vencen luego del tiempo calculado por Runge-Kutta.
 - El enfermero alterna la preferencia entre COVID y gripe. Si toca COVID pero no hay 5 pacientes, intenta con gripe.
-- La interrupcion es periodica. Si ocurre durante una vacunacion, pausa al enfermero y al finalizar continua con el tiempo restante.
+- Las interrupciones llegan con distribucion exponencial negativa. Si una llega mientras ya se atiende otra, se descarta. Si ocurre durante una vacunacion, pausa al enfermero y al finalizar continua con el tiempo restante.
 
 ## Runge-Kutta
 
