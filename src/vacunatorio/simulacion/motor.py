@@ -23,6 +23,12 @@ from src.vacunatorio.simulacion.runge_kutta import calcular_runge_kutta
 from src.vacunatorio.utils.utilidades import grupo_uniforme_1_a_4, tiempo_exponencial
 
 
+ESTADO_ENFERMERO_INTERRUMPIDO = "Buscando café"
+ESTADO_PACIENTE_EN_VACUNACION = "En vacunacion"
+ESTADO_PACIENTE_INTERRUMPIDO = "Interrumpido"
+ESTADO_PACIENTE_VACUNADO = "Vacunado"
+
+
 @dataclass
 class Simulacion:
     p: object
@@ -148,7 +154,7 @@ class Simulacion:
     def avanzar_reloj(self, nuevo_reloj):
         if self.enfermero_estado == "Ocupado":
             self.tiempo_ocupado += nuevo_reloj - self.ultima_actualizacion_ocupacion
-        elif self.enfermero_estado == "Interrumpido":
+        elif self.enfermero_estado == ESTADO_ENFERMERO_INTERRUMPIDO:
             self.tiempo_interrumpido += nuevo_reloj - self.ultima_actualizacion_ocupacion
         self.ultima_actualizacion_ocupacion = nuevo_reloj
         self.reloj = nuevo_reloj
@@ -238,7 +244,7 @@ class Simulacion:
 
         for paciente_id in self.lote_actual_pacientes:
             paciente = self.pacientes[paciente_id]
-            paciente.estado = "Vacunado"
+            paciente.estado = ESTADO_PACIENTE_VACUNADO
             permanencia = self.reloj - paciente.llegada
             if tipo == COVID:
                 self.suma_tiempo_sistema_covid += max(0, permanencia)
@@ -263,7 +269,7 @@ class Simulacion:
     def procesar_llegada_interrupcion(self):
         rnd_interrupcion, tiempo_interrupcion = self.programar_proxima_interrupcion()
 
-        if self.enfermero_estado == "Interrumpido":
+        if self.enfermero_estado == ESTADO_ENFERMERO_INTERRUMPIDO:
             self.agregar_fila(
                 EVENTO_INTERRUPCION_DESCARTADA,
                 rnd_interrupcion=rnd_interrupcion,
@@ -277,8 +283,9 @@ class Simulacion:
         if self.enfermero_estado == "Ocupado":
             self.restante_vacunacion = self.fin_vacunacion - self.reloj
             self.fin_vacunacion = INFINITO
+            self.marcar_lote_interrumpido()
 
-        self.enfermero_estado = "Interrumpido"
+        self.enfermero_estado = ESTADO_ENFERMERO_INTERRUMPIDO
         self.agregar_fila(
             EVENTO_INICIO_INTERRUPCION,
             rnd_interrupcion=rnd_interrupcion,
@@ -292,6 +299,7 @@ class Simulacion:
             self.enfermero_estado = "Ocupado"
             self.fin_vacunacion = self.reloj + self.restante_vacunacion
             self.restante_vacunacion = 0.0
+            self.marcar_lote_en_vacunacion()
         else:
             self.enfermero_estado = "Libre"
             self.intentar_iniciar_vacunacion()
@@ -388,8 +396,12 @@ class Simulacion:
 
     def marcar_lote_en_vacunacion(self):
         for paciente_id in self.lote_actual_pacientes:
-            self.pacientes[paciente_id].estado = "En vacunacion"
+            self.pacientes[paciente_id].estado = ESTADO_PACIENTE_EN_VACUNACION
             self.pacientes[paciente_id].inicio_vacunacion = self.reloj
+
+    def marcar_lote_interrumpido(self):
+        for paciente_id in self.lote_actual_pacientes:
+            self.pacientes[paciente_id].estado = ESTADO_PACIENTE_INTERRUMPIDO
 
     def porcentaje(self, parte, total):
         return 100 * parte / total if total else 0
@@ -397,7 +409,7 @@ class Simulacion:
     def tiempo_remanente_lote(self):
         if self.enfermero_estado == "Ocupado" and self.fin_vacunacion != INFINITO:
             return max(0, self.fin_vacunacion - self.reloj)
-        if self.enfermero_estado == "Interrumpido":
+        if self.enfermero_estado == ESTADO_ENFERMERO_INTERRUMPIDO:
             return self.restante_vacunacion
         return 0
 

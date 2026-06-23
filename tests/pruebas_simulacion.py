@@ -16,7 +16,7 @@ from src.vacunatorio.config.constantes import (
 )
 from src.vacunatorio.config.parametros import Parametros
 from src.vacunatorio.dominio.modelos import Paciente
-from src.vacunatorio.simulacion.motor import Simulacion
+from src.vacunatorio.simulacion.motor import ESTADO_ENFERMERO_INTERRUMPIDO, Simulacion
 
 
 def buscar_estadistica(resultado, nombre):
@@ -214,7 +214,7 @@ def probar_interrupcion_exponencial_muestra_rnd():
 def probar_interrupcion_descartada_no_modifica_la_actual():
     simulacion = Simulacion(Parametros(mostrar_desde=0, mostrar_cantidad=10))
     simulacion.reloj = 100
-    simulacion.enfermero_estado = "Interrumpido"
+    simulacion.enfermero_estado = ESTADO_ENFERMERO_INTERRUMPIDO
     simulacion.fin_interrupcion = 180
 
     simulacion.procesar_llegada_interrupcion()
@@ -229,11 +229,31 @@ def probar_tiempo_interrumpido_se_acumula_con_el_reloj():
     simulacion = Simulacion(Parametros())
     simulacion.reloj = 10
     simulacion.ultima_actualizacion_ocupacion = 10
-    simulacion.enfermero_estado = "Interrumpido"
+    simulacion.enfermero_estado = ESTADO_ENFERMERO_INTERRUMPIDO
 
     simulacion.avanzar_reloj(37.5)
 
     assert simulacion.tiempo_interrumpido == 27.5
+
+
+def probar_interrupcion_pausa_lote_y_marca_pacientes():
+    simulacion = Simulacion(Parametros(mostrar_desde=0, mostrar_cantidad=10, duracion_interrupcion=20))
+    simulacion.crear_pacientes(GRIPE, 3)
+    simulacion.iniciar_lote_gripe()
+    simulacion.reloj = 5
+
+    simulacion.procesar_llegada_interrupcion()
+
+    assert simulacion.enfermero_estado == ESTADO_ENFERMERO_INTERRUMPIDO
+    assert all(simulacion.pacientes[i].estado == "Interrumpido" for i in [1, 2, 3])
+    assert simulacion.fin_vacunacion == float("inf")
+    assert simulacion.restante_vacunacion > 0
+
+    simulacion.reloj = simulacion.fin_interrupcion
+    simulacion.procesar_fin_interrupcion()
+
+    assert simulacion.enfermero_estado == "Ocupado"
+    assert all(simulacion.pacientes[i].estado == "En vacunacion" for i in [1, 2, 3])
 
 
 def probar_porcentajes_gripe_sobre_dosis_procesadas():
@@ -273,6 +293,7 @@ if __name__ == "__main__":
     probar_interrupcion_exponencial_muestra_rnd()
     probar_interrupcion_descartada_no_modifica_la_actual()
     probar_tiempo_interrumpido_se_acumula_con_el_reloj()
+    probar_interrupcion_pausa_lote_y_marca_pacientes()
     probar_porcentajes_gripe_sobre_dosis_procesadas()
     probar_utilizacion_usa_tiempo_real_transcurrido()
     print("Todas las pruebas pasaron correctamente.")
