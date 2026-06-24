@@ -17,6 +17,7 @@ from src.vacunatorio.config.constantes import (
 from src.vacunatorio.config.parametros import Parametros
 from src.vacunatorio.dominio.modelos import Paciente
 from src.vacunatorio.simulacion.motor import ESTADO_ENFERMERO_INTERRUMPIDO, Simulacion
+from src.vacunatorio.ui.interfaz import Aplicacion
 
 
 def buscar_estadistica(resultado, nombre):
@@ -157,7 +158,7 @@ def probar_interrupcion_parametrizable():
     assert buscar_estadistica(resultado, "Tiempo total interrumpido (seg)") > 0
 
 
-def probar_gripe_atiende_solo_el_primer_grupo_en_cola():
+def probar_gripe_atiende_todos_los_pacientes_en_cola():
     simulacion = Simulacion(Parametros(dosis_caja_gripe=10))
     simulacion.crear_pacientes(GRIPE, 3)
     simulacion.crear_pacientes(GRIPE, 3)
@@ -165,10 +166,9 @@ def probar_gripe_atiende_solo_el_primer_grupo_en_cola():
     inicio = simulacion.iniciar_lote_gripe()
 
     assert inicio is True
-    assert simulacion.lote_actual_pacientes == [1, 2, 3]
-    assert list(simulacion.cola_gripe) == [4, 5, 6]
-    assert all(simulacion.pacientes[i].estado == "En vacunacion" for i in [1, 2, 3])
-    assert all(simulacion.pacientes[i].estado == "Esperando" for i in [4, 5, 6])
+    assert simulacion.lote_actual_pacientes == [1, 2, 3, 4, 5, 6]
+    assert list(simulacion.cola_gripe) == []
+    assert all(simulacion.pacientes[i].estado == "En vacunacion" for i in range(1, 7))
 
 
 def probar_gripe_abre_otra_caja_y_atiende_completo_si_faltan_dosis():
@@ -182,12 +182,63 @@ def probar_gripe_abre_otra_caja_y_atiende_completo_si_faltan_dosis():
     inicio = simulacion.iniciar_lote_gripe()
 
     assert inicio is True
-    assert simulacion.lote_actual_pacientes == [1, 2, 3]
-    assert list(simulacion.cola_gripe) == [4, 5]
+    assert simulacion.lote_actual_pacientes == [1, 2, 3, 4, 5]
+    assert list(simulacion.cola_gripe) == []
     assert simulacion.pacientes[3].grupo_llegada != simulacion.pacientes[4].grupo_llegada
     assert simulacion.cajas_gripe_abiertas == 2
-    assert simulacion.dosis_gripe_abiertas == 9
+    assert simulacion.dosis_gripe_abiertas == 7
     assert simulacion.vencimiento_gripe == simulacion.reloj + simulacion.tiempo_vencimiento_gripe
+
+
+def probar_columnas_de_pacientes_muestran_tipo_e_id_real():
+    aplicacion = Aplicacion.__new__(Aplicacion)
+    filas = [
+        {
+            "_objetos": [
+                {"ID": 12, "Vacuna": GRIPE, "Estado": "Esperando", "Llegada (seg)": 5},
+                {"ID": 91, "Vacuna": COVID, "Estado": "Esperando", "Llegada (seg)": 8},
+            ]
+        }
+    ]
+
+    encabezado = aplicacion.construir_encabezado_vector(filas)
+    grupos_pacientes = {
+        grupo["texto"]: grupo
+        for grupo in encabezado
+        if grupo["texto"].startswith("PACIENTES ")
+    }
+
+    assert grupos_pacientes["PACIENTES GRIPE"]["hijos"][0]["texto"] == "Paciente Gripe ID 12"
+    assert grupos_pacientes["PACIENTES COVID"]["hijos"][0]["texto"] == "Paciente COVID ID 91"
+    assert aplicacion.valor_vector(filas[0], "__paciente_Gripe_12_estado") == "Esperando"
+    assert aplicacion.valor_vector(filas[0], "__paciente_COVID_91_llegada") == 8
+
+
+def probar_paginacion_limita_columnas_sin_perder_ids():
+    aplicacion = Aplicacion.__new__(Aplicacion)
+    aplicacion.ids_pacientes_vector = {
+        GRIPE: list(range(1, 21)),
+        COVID: list(range(21, 41)),
+    }
+    aplicacion.pagina_pacientes_vector = 0
+
+    primera_pagina = aplicacion.ids_pacientes_pagina_actual()
+    assert primera_pagina[GRIPE] == list(range(1, 17))
+    assert primera_pagina[COVID] == []
+    assert aplicacion.cantidad_paginas_pacientes() == 3
+
+    aplicacion.pagina_pacientes_vector = 1
+    segunda_pagina = aplicacion.ids_pacientes_pagina_actual()
+    assert segunda_pagina[GRIPE] == list(range(17, 21))
+    assert segunda_pagina[COVID] == list(range(21, 33))
+
+    ids_mostrados = set()
+    for pagina in range(aplicacion.cantidad_paginas_pacientes()):
+        aplicacion.pagina_pacientes_vector = pagina
+        seleccion = aplicacion.ids_pacientes_pagina_actual()
+        ids_mostrados.update(seleccion[GRIPE])
+        ids_mostrados.update(seleccion[COVID])
+    assert ids_mostrados == set(range(1, 41))
 
 
 def probar_gripe_abre_varias_cajas_si_el_parametro_es_chico():
@@ -287,9 +338,11 @@ if __name__ == "__main__":
     probar_runge_kutta_configurable()
     probar_vector_muestra_atributos_de_pacientes_presentes()
     probar_interrupcion_parametrizable()
-    probar_gripe_atiende_solo_el_primer_grupo_en_cola()
+    probar_gripe_atiende_todos_los_pacientes_en_cola()
     probar_gripe_abre_otra_caja_y_atiende_completo_si_faltan_dosis()
     probar_gripe_abre_varias_cajas_si_el_parametro_es_chico()
+    probar_columnas_de_pacientes_muestran_tipo_e_id_real()
+    probar_paginacion_limita_columnas_sin_perder_ids()
     probar_interrupcion_exponencial_muestra_rnd()
     probar_interrupcion_descartada_no_modifica_la_actual()
     probar_tiempo_interrumpido_se_acumula_con_el_reloj()

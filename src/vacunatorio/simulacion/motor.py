@@ -358,15 +358,8 @@ class Simulacion:
         if not self.cola_gripe:
             return False
 
-        primer_grupo = self.pacientes[self.cola_gripe[0]].grupo_llegada
-        cantidad_primer_grupo = 0
-        for paciente_id in self.cola_gripe:
-            if self.pacientes[paciente_id].grupo_llegada != primer_grupo:
-                break
-            cantidad_primer_grupo += 1
-
-        self.asegurar_dosis_gripe(cantidad_primer_grupo)
-        cantidad = cantidad_primer_grupo
+        cantidad = len(self.cola_gripe)
+        self.asegurar_dosis_gripe(cantidad)
 
         self.lote_actual_pacientes = [self.cola_gripe.popleft() for _ in range(cantidad)]
         self.lote_actual_tipo = GRIPE
