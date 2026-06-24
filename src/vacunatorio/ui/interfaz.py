@@ -181,6 +181,8 @@ class TablaEncabezadoAgrupado:
 
 
 class Aplicacion(tk.Tk):
+    PACIENTES_POR_PAGINA = 16
+
     def __init__(self):
         super().__init__()
         self.title("Simulacion Vacunatorio")
@@ -188,6 +190,8 @@ class Aplicacion(tk.Tk):
         self.minsize(1200, 700)
         self.resultado = None
         self.filas_vector_actuales = []
+        self.ids_pacientes_vector = {GRIPE: [], COVID: []}
+        self.pagina_pacientes_vector = 0
         self.variables = {}
         self.crear_interfaz()
 
@@ -229,7 +233,26 @@ class Aplicacion(tk.Tk):
         panel_superior = ttk.Frame(self.tab_vector)
         panel_superior.pack(fill="both", expand=True)
 
-        ttk.Label(panel_superior, text="Vector de estado").pack(anchor="w")
+        barra_vector = ttk.Frame(panel_superior)
+        barra_vector.pack(fill="x")
+        ttk.Label(barra_vector, text="Vector de estado").pack(side="left")
+        self.boton_pagina_anterior = ttk.Button(
+            barra_vector,
+            text="Pacientes anteriores",
+            command=self.mostrar_pagina_pacientes_anterior,
+            state="disabled",
+        )
+        self.boton_pagina_anterior.pack(side="right")
+        self.boton_pagina_siguiente = ttk.Button(
+            barra_vector,
+            text="Pacientes siguientes",
+            command=self.mostrar_pagina_pacientes_siguiente,
+            state="disabled",
+        )
+        self.boton_pagina_siguiente.pack(side="right", padx=4)
+        self.texto_pagina_pacientes = tk.StringVar(value="Sin pacientes")
+        ttk.Label(barra_vector, textvariable=self.texto_pagina_pacientes).pack(side="right", padx=8)
+
         self.tabla_vector = TablaEncabezadoAgrupado(panel_superior)
         self.tabla_vector.bind("<<TreeviewSelect>>", self.mostrar_detalle_pacientes)
 
@@ -367,19 +390,84 @@ class Aplicacion(tk.Tk):
     def cargar_vector(self, filas):
         if not filas:
             self.filas_vector_actuales = []
+            self.ids_pacientes_vector = {GRIPE: [], COVID: []}
+            self.pagina_pacientes_vector = 0
             self.tabla_vector.configurar_columnas([hoja("Estado", "ESTADO", 300, AMARILLO)])
             self.tabla_vector.insert("", "end", values=["No hay filas para el rango solicitado"])
+            self.actualizar_controles_paginas_pacientes()
             self.limpiar_detalle_pacientes()
             return
 
-        encabezado = self.construir_encabezado_vector(filas)
+        self.indexar_objetos_por_vacuna(filas)
+        self.filas_vector_actuales = filas
+        self.ids_pacientes_vector = {
+            GRIPE: self.ids_pacientes_en_filas(filas, GRIPE),
+            COVID: self.ids_pacientes_en_filas(filas, COVID),
+        }
+        self.pagina_pacientes_vector = 0
+        self.cargar_pagina_vector()
+
+    def cargar_pagina_vector(self):
+        pacientes_ids = self.ids_pacientes_pagina_actual()
+        encabezado = self.construir_encabezado_vector(
+            self.filas_vector_actuales,
+            pacientes_ids,
+        )
         columnas = self.columnas_de_encabezado(encabezado)
         self.tabla_vector.configurar_columnas(encabezado)
-        self.filas_vector_actuales = filas
-        for indice, fila in enumerate(filas):
+        for indice, fila in enumerate(self.filas_vector_actuales):
             valores = [formatear_numero(self.valor_vector(fila, columna["id"])) for columna in columnas]
             self.tabla_vector.insert("", "end", iid=str(indice), values=valores)
+        self.actualizar_controles_paginas_pacientes()
         self.limpiar_detalle_pacientes()
+
+    def ids_pacientes_pagina_actual(self):
+        todos = [
+            (vacuna, paciente_id)
+            for vacuna in (GRIPE, COVID)
+            for paciente_id in self.ids_pacientes_vector[vacuna]
+        ]
+        inicio = self.pagina_pacientes_vector * self.PACIENTES_POR_PAGINA
+        seleccionados = todos[inicio:inicio + self.PACIENTES_POR_PAGINA]
+        return {
+            GRIPE: [paciente_id for vacuna, paciente_id in seleccionados if vacuna == GRIPE],
+            COVID: [paciente_id for vacuna, paciente_id in seleccionados if vacuna == COVID],
+        }
+
+    def cantidad_paginas_pacientes(self):
+        cantidad = sum(len(ids) for ids in self.ids_pacientes_vector.values())
+        if cantidad == 0:
+            return 1
+        return (cantidad + self.PACIENTES_POR_PAGINA - 1) // self.PACIENTES_POR_PAGINA
+
+    def actualizar_controles_paginas_pacientes(self):
+        cantidad_pacientes = sum(len(ids) for ids in self.ids_pacientes_vector.values())
+        paginas = self.cantidad_paginas_pacientes()
+        pagina = min(self.pagina_pacientes_vector + 1, paginas)
+        if cantidad_pacientes:
+            self.texto_pagina_pacientes.set(
+                f"Pacientes {pagina}/{paginas} ({cantidad_pacientes} IDs)"
+            )
+        else:
+            self.texto_pagina_pacientes.set("Sin pacientes")
+        self.boton_pagina_anterior.configure(
+            state="normal" if self.pagina_pacientes_vector > 0 else "disabled"
+        )
+        self.boton_pagina_siguiente.configure(
+            state="normal" if self.pagina_pacientes_vector + 1 < paginas else "disabled"
+        )
+
+    def mostrar_pagina_pacientes_anterior(self):
+        if self.pagina_pacientes_vector <= 0:
+            return
+        self.pagina_pacientes_vector -= 1
+        self.cargar_pagina_vector()
+
+    def mostrar_pagina_pacientes_siguiente(self):
+        if self.pagina_pacientes_vector + 1 >= self.cantidad_paginas_pacientes():
+            return
+        self.pagina_pacientes_vector += 1
+        self.cargar_pagina_vector()
 
     def columnas_visibles(self, filas):
         encabezado = self.construir_encabezado_vector(filas)
@@ -394,12 +482,17 @@ class Aplicacion(tk.Tk):
                 columnas.append(nodo)
         return columnas
 
-    def construir_encabezado_vector(self, filas):
+    def construir_encabezado_vector(self, filas, pacientes_ids=None):
         self.indexar_objetos_por_vacuna(filas)
-        pacientes_gripe = max(1, self.max_pacientes_en_filas(filas, GRIPE))
-        pacientes_covid = max(1, self.max_pacientes_en_filas(filas, COVID))
+        if pacientes_ids is None:
+            pacientes_ids = {
+                GRIPE: self.ids_pacientes_en_filas(filas, GRIPE),
+                COVID: self.ids_pacientes_en_filas(filas, COVID),
+            }
+        pacientes_gripe = pacientes_ids.get(GRIPE, [])
+        pacientes_covid = pacientes_ids.get(COVID, [])
 
-        return [
+        encabezado = [
             hoja("Iteracion", "ITERACION", 86, AMARILLO),
             hoja("Reloj (seg)", "RELOJ", 100, AMARILLO),
             hoja("Evento", "EVENTOS", 150, AMARILLO),
@@ -468,37 +561,59 @@ class Aplicacion(tk.Tk):
                 hoja("Tiempo promedio espera", "Tiempo Promedio\nde Espera", 134, AZUL_ESTADISTICAS),
                 hoja("Tiempo promedio permanencia", "Tiempo Promedio de\npermanencia en sistema", 170, AZUL_ESTADISTICAS),
             ], BLANCO),
-            self.grupo_pacientes(GRIPE, "PACIENTES GRIPE", "Paciente Gripe", pacientes_gripe, AMARILLO_PACIENTE),
-            self.grupo_pacientes(COVID, "PACIENTES COVID", "Paciente COVID", pacientes_covid, ROSA_PACIENTE),
         ]
+        if pacientes_gripe:
+            encabezado.append(
+                self.grupo_pacientes(
+                    GRIPE,
+                    "PACIENTES GRIPE",
+                    "Paciente Gripe",
+                    pacientes_gripe,
+                    AMARILLO_PACIENTE,
+                )
+            )
+        if pacientes_covid:
+            encabezado.append(
+                self.grupo_pacientes(
+                    COVID,
+                    "PACIENTES COVID",
+                    "Paciente COVID",
+                    pacientes_covid,
+                    ROSA_PACIENTE,
+                )
+            )
+        return encabezado
 
-    def grupo_pacientes(self, vacuna, titulo, prefijo, cantidad, color):
+    def grupo_pacientes(self, vacuna, titulo, prefijo, pacientes_ids, color):
         hijos = []
-        for indice in range(cantidad):
-            numero = indice + 1
+        for paciente_id in pacientes_ids:
             hijos.append(
-                grupo(f"{prefijo} {numero}", color, [
-                    hoja(f"__paciente_{vacuna}_{indice}_estado", "Estado", 86, color),
-                    hoja(f"__paciente_{vacuna}_{indice}_llegada", "Hora llegada", 112, color),
+                grupo(f"{prefijo} ID {paciente_id}", color, [
+                    hoja(f"__paciente_{vacuna}_{paciente_id}_estado", "Estado", 86, color),
+                    hoja(f"__paciente_{vacuna}_{paciente_id}_llegada", "Hora llegada", 112, color),
                 ], NEGRO)
             )
         return grupo(titulo, AZUL_OSCURO, hijos, BLANCO)
 
     def indexar_objetos_por_vacuna(self, filas):
         for fila in filas:
-            if "_objetos_por_vacuna" in fila:
+            if "_objetos_por_vacuna" in fila and "_objetos_por_vacuna_id" in fila:
                 continue
             grupos = {GRIPE: [], COVID: []}
+            grupos_por_id = {GRIPE: {}, COVID: {}}
             for paciente in fila.get("_objetos", []):
-                grupos[paciente.get("Vacuna")].append(paciente)
+                vacuna = paciente.get("Vacuna")
+                grupos[vacuna].append(paciente)
+                grupos_por_id[vacuna][paciente.get("ID")] = paciente
             fila["_objetos_por_vacuna"] = grupos
+            fila["_objetos_por_vacuna_id"] = grupos_por_id
 
-    def max_pacientes_en_filas(self, filas, vacuna):
-        maximo = 0
+    def ids_pacientes_en_filas(self, filas, vacuna):
+        pacientes_ids = set()
         for fila in filas:
-            cantidad = len(fila.get("_objetos_por_vacuna", {}).get(vacuna, []))
-            maximo = max(maximo, cantidad)
-        return maximo
+            pacientes = fila.get("_objetos_por_vacuna", {}).get(vacuna, [])
+            pacientes_ids.update(paciente["ID"] for paciente in pacientes)
+        return sorted(pacientes_ids)
 
     def valor_vector(self, fila, columna):
         if columna.startswith("__paciente_"):
@@ -508,18 +623,17 @@ class Aplicacion(tk.Tk):
     def valor_paciente_vector(self, fila, columna):
         partes = columna.split("_")
         vacuna = partes[3]
-        indice = int(partes[4])
+        paciente_id = int(partes[4])
         atributo = partes[5]
 
-        grupos = fila.get("_objetos_por_vacuna")
-        if grupos is None:
+        grupos_por_id = fila.get("_objetos_por_vacuna_id")
+        if grupos_por_id is None:
             self.indexar_objetos_por_vacuna([fila])
-            grupos = fila["_objetos_por_vacuna"]
-        pacientes = grupos.get(vacuna, [])
-        if indice >= len(pacientes):
+            grupos_por_id = fila["_objetos_por_vacuna_id"]
+        paciente = grupos_por_id.get(vacuna, {}).get(paciente_id)
+        if paciente is None:
             return ""
 
-        paciente = pacientes[indice]
         if atributo == "estado":
             return paciente.get("Estado", "")
         if atributo == "llegada":

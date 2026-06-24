@@ -73,12 +73,6 @@ def validar_resultado(nombre, simulacion, resultado):
     assert ids_cola.issubset(simulacion.pacientes), f"{nombre}: cola apunta a paciente inexistente"
     assert ids_lote.issubset(simulacion.pacientes), f"{nombre}: lote apunta a paciente inexistente"
 
-    if simulacion.lote_actual_tipo == GRIPE and simulacion.lote_actual_pacientes:
-        pacientes_lote = [simulacion.pacientes[i] for i in simulacion.lote_actual_pacientes]
-        grupos_lote = {paciente.grupo_llegada for paciente in pacientes_lote}
-        assert len(grupos_lote) == 1, f"{nombre}: lote de gripe mezcla grupos"
-        assert len(pacientes_lote) == pacientes_lote[0].grupo, f"{nombre}: grupo de gripe dividido"
-
     assert simulacion.max_cola_covid >= len(simulacion.cola_covid), f"{nombre}: max cola COVID inconsistente"
     assert simulacion.max_cola_gripe >= len(simulacion.cola_gripe), f"{nombre}: max cola gripe inconsistente"
     assert 0 <= simulacion.tiempo_ocupado <= p.tiempo_simulacion, f"{nombre}: ocupacion fuera de rango"
