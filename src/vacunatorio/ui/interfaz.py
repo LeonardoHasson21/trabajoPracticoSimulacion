@@ -377,11 +377,11 @@ class Aplicacion(tk.Tk):
             "Estadistica": 250,
             "Valor": 140,
             "Inicio vacunacion": 128,
-            "E+H/2*K1": 112,
-            "E+H/2*K2": 112,
-            "E+H*K3": 100,
+            "R+H/2*K1": 112,
+            "R+H/2*K2": 112,
+            "R+H*K3": 100,
             "t(i+1)": 88,
-            "E(i+1)": 88,
+            "R(i+1)": 88,
         }
         if columna in anchos_especiales:
             return anchos_especiales[columna]
@@ -688,19 +688,19 @@ class Aplicacion(tk.Tk):
     def columnas_rk(self):
         return [
             ("t", "t"),
-            ("E", "E"),
+            ("E", "R"),
             ("K1", "K1"),
-            ("E+H/2*K1", "E+H/2*K1"),
+            ("E+H/2*K1", "R+H/2*K1"),
             ("t+H/2 K2", "t+H/2"),
             ("K2", "K2"),
-            ("E+H/2*K2", "E+H/2*K2"),
+            ("E+H/2*K2", "R+H/2*K2"),
             ("t+H/2 K3", "t+H/2"),
             ("K3", "K3"),
-            ("E+H*K3", "E+H*K3"),
+            ("E+H*K3", "R+H*K3"),
             ("t+H", "t+H"),
             ("K4", "K4"),
             ("t(i+1)", "t(i+1)"),
-            ("E(i+1)", "E(i+1)"),
+            ("E(i+1)", "R(i+1)"),
         ]
 
     def exportar_csv(self):
