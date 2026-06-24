@@ -476,8 +476,8 @@ class Simulacion:
             "Ac personas por llegada": total_llegados,
             "Ac tiempo espera cola": suma_espera_total,
             "Ac tiempo sistema": suma_tiempo_sistema,
-            "Porc gripe aplicadas": self.porcentaje(self.gripe_vacunados, dosis_gripe_procesadas),
-            "Porc covid aplicadas": self.porcentaje(self.covid_vacunados, self.covid_llegados),
+            "Porc gripe aplicadas": self.porcentaje(self.gripe_vacunados, total_vacunados),
+            "Porc covid aplicadas": self.porcentaje(self.covid_vacunados, total_vacunados),
             "Porc gripe vencidas": self.porcentaje(self.dosis_gripe_descartadas, dosis_gripe_procesadas),
             "Tiempo promedio atencion": self.tiempo_ocupado / total_atendidos if total_atendidos else 0,
             "Total pacientes atendidos": total_atendidos,
@@ -524,8 +524,8 @@ class Simulacion:
         suma_tiempo_sistema = self.suma_tiempo_sistema_covid + self.suma_tiempo_sistema_gripe
         dosis_gripe_procesadas = self.gripe_vacunados + self.dosis_gripe_descartadas
         return [
-            ("Porcentaje de Vacunas de gripe aplicadas", self.porcentaje(self.gripe_vacunados, dosis_gripe_procesadas)),
-            ("Porcentaje de Vacunas de COVID aplicadas", self.porcentaje(self.covid_vacunados, self.covid_llegados)),
+            ("Porcentaje de Vacunas de gripe aplicadas", self.porcentaje(self.gripe_vacunados, total_vacunados)),
+            ("Porcentaje de Vacunas de COVID aplicadas", self.porcentaje(self.covid_vacunados, total_vacunados)),
             ("Porcentaje de Vacunas de Gripe Vencidas", self.porcentaje(self.dosis_gripe_descartadas, dosis_gripe_procesadas)),
             ("Tiempo Promedio de Atencion", self.tiempo_ocupado / total_atendidos if total_atendidos else 0),
             ("Total pacientes atendidos", total_atendidos),

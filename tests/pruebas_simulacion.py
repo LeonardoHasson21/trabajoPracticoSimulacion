@@ -307,15 +307,23 @@ def probar_interrupcion_pausa_lote_y_marca_pacientes():
     assert all(simulacion.pacientes[i].estado == "En vacunacion" for i in [1, 2, 3])
 
 
-def probar_porcentajes_gripe_sobre_dosis_procesadas():
+def probar_porcentajes_aplicadas_sobre_total_de_ambos_tipos():
     simulacion = Simulacion(Parametros())
-    simulacion.gripe_vacunados = 8
+    simulacion.gripe_vacunados = 30
+    simulacion.covid_vacunados = 70
     simulacion.dosis_gripe_descartadas = 2
     simulacion.gripe_llegados = 100
+    simulacion.covid_llegados = 200
     estadisticas = dict(simulacion.estadisticas())
 
-    assert estadisticas["Porcentaje de Vacunas de gripe aplicadas"] == 80
-    assert estadisticas["Porcentaje de Vacunas de Gripe Vencidas"] == 20
+    assert estadisticas["Porcentaje de Vacunas de gripe aplicadas"] == 30
+    assert estadisticas["Porcentaje de Vacunas de COVID aplicadas"] == 70
+    assert estadisticas["Porcentaje de Vacunas de Gripe Vencidas"] == 6.25
+
+    simulacion.agregar_fila("Prueba")
+    fila = simulacion.filas[-1]
+    assert fila["Porc gripe aplicadas"] == 30
+    assert fila["Porc covid aplicadas"] == 70
 
 
 def probar_utilizacion_usa_tiempo_real_transcurrido():
@@ -347,6 +355,6 @@ if __name__ == "__main__":
     probar_interrupcion_descartada_no_modifica_la_actual()
     probar_tiempo_interrumpido_se_acumula_con_el_reloj()
     probar_interrupcion_pausa_lote_y_marca_pacientes()
-    probar_porcentajes_gripe_sobre_dosis_procesadas()
+    probar_porcentajes_aplicadas_sobre_total_de_ambos_tipos()
     probar_utilizacion_usa_tiempo_real_transcurrido()
     print("Todas las pruebas pasaron correctamente.")
